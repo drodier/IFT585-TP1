@@ -45,6 +45,8 @@ public:
 
 class CRCDataEncoderDecoder : public DataEncoderDecoder
 {
+private:
+    DynamicDataBuffer* generator;
 public:
     CRCDataEncoderDecoder();
     ~CRCDataEncoderDecoder();

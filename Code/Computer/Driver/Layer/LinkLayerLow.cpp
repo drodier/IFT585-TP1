@@ -69,7 +69,8 @@ std::pair<bool, DynamicDataBuffer> HammingDataEncoderDecoder::decode(const Dynam
 //===================================================================
 CRCDataEncoderDecoder::CRCDataEncoderDecoder()
 {
-    generator = "10011";
+    uint8_t data[5] = { '1', '0', '0', '1', '1' };
+    generator = new DynamicDataBuffer(5, data);
 }
 
 CRCDataEncoderDecoder::~CRCDataEncoderDecoder()
@@ -79,7 +80,16 @@ CRCDataEncoderDecoder::~CRCDataEncoderDecoder()
 
 DynamicDataBuffer CRCDataEncoderDecoder::encode(const DynamicDataBuffer& data) const
 {
-    // À faire TP1 (si CRC demandé)
+    DynamicDataBuffer* encoded_data = new DynamicDataBuffer(generator->size()-1 + data.size());
+
+    for (int i = 0; i < encoded_data->size(); i++)
+    {
+        if (i < generator->size()-1)
+            encoded_data->operator[](i) = 0;
+        else
+            encoded_data->operator[](i) = data[i - (generator->size()-1)];
+    }
+
     return data;
 }
 
