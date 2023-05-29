@@ -109,6 +109,8 @@ DynamicDataBuffer CRCDataEncoderDecoder::encode(const DynamicDataBuffer& data) c
     // On ajoute le code CRC dans le padding qui avait été ajouté au début
     encoded_data->operator[](encoded_data->size() - 1) = reste;
 
+    affichageEncoding(data, reste, *encoded_data);
+
     return *encoded_data;
 }
 
@@ -139,7 +141,59 @@ std::pair<bool, DynamicDataBuffer> CRCDataEncoderDecoder::decode(const DynamicDa
         decoded_data->operator[](i) = data[i];
     }
 
+    affichageDecoding(data, reste, *decoded_data);
+
     return std::pair<bool, DynamicDataBuffer>(reste == 0, *decoded_data);
+}
+
+void CRCDataEncoderDecoder::affichageEncoding(const DynamicDataBuffer& data, uint8_t reste, DynamicDataBuffer& encoded_data) const
+{
+    cout << endl << "Debut du encoding du message : ";
+
+    for (int i = 0; i < data.size(); i++)
+    {
+        cout << hex << (int)data[i] << " ";
+    }
+
+    cout << endl;
+    cout << "Le generateur '0x" << hex << generator << "' donne un reste de '0x" << hex << (int)reste << "'" << endl;
+    cout << "Le message envoye devient donc : ";
+
+    for (int i = 0; i < encoded_data.size(); i++)
+    {
+        cout << hex << (int)encoded_data[i] << " ";
+    }
+
+    cout << endl << endl;
+}
+
+void CRCDataEncoderDecoder::affichageDecoding(const DynamicDataBuffer& data, uint8_t reste, DynamicDataBuffer& decoded_data) const
+{
+    cout << endl << "Debut du decodage du message : ";
+
+    for (int i = 0; i < data.size(); i++)
+    {
+        cout << hex << (int)data[i] << " ";
+    }
+
+    cout << endl;
+    cout << "Le generateur '0x" << hex << generator << "' donne un reste de '0x" << hex << (int)reste << "'" << endl;
+
+    if (reste == 0)
+    {
+        cout << "La transmission s'est fait sans erreur ! Le message reel est donc : ";
+
+        for (int i = 0; i < decoded_data.size(); i++)
+        {
+            cout << hex << (int)decoded_data[i] << " ";
+        }
+    }
+    else
+    {
+        cout << "Il y a eu une erreur lors de la transmission";
+    }
+
+    cout << endl << endl;
 }
 
 
