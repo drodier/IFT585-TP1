@@ -69,7 +69,7 @@ std::pair<bool, DynamicDataBuffer> HammingDataEncoderDecoder::decode(const Dynam
 //===================================================================
 CRCDataEncoderDecoder::CRCDataEncoderDecoder()
 {
-    // À faire TP1 (si CRC demandé)
+    generator = 0b100000001;
 }
 
 CRCDataEncoderDecoder::~CRCDataEncoderDecoder()
@@ -79,14 +79,67 @@ CRCDataEncoderDecoder::~CRCDataEncoderDecoder()
 
 DynamicDataBuffer CRCDataEncoderDecoder::encode(const DynamicDataBuffer& data) const
 {
-    // À faire TP1 (si CRC demandé)
-    return data;
+    DynamicDataBuffer* encoded_data = new DynamicDataBuffer(data.size() + 1);
+
+    // On vient ajouter le padding sur les bits de poids faible de la trame
+    for (int i = 0; i < encoded_data->size(); i++)
+    {
+        if (i == encoded_data->size() - 1)
+            encoded_data->operator[](i) = 0x00;
+        else
+            encoded_data->operator[](i) = data[i];
+    }
+
+    uint8_t reste = 0;
+
+    // Ici on fait la division binaire pour aller caculer le code CRC
+    for (int i = 0; i < encoded_data->size(); i++)
+    {
+        reste ^= encoded_data->operator[](i);
+
+        for (int j = 0; j < 8; j++)
+        {
+            if (reste & 0x80)
+                reste = (reste << 1) ^ generator;
+            else
+                reste <<= 1;
+        }
+    }
+
+    // On ajoute le code CRC dans le padding qui avait été ajouté au début
+    encoded_data->operator[](encoded_data->size() - 1) = reste;
+
+    return *encoded_data;
 }
 
 std::pair<bool, DynamicDataBuffer> CRCDataEncoderDecoder::decode(const DynamicDataBuffer& data) const
 {
-    // À faire TP1 (si CRC demandé)
-    return std::pair<bool, DynamicDataBuffer>(true, data);
+    uint8_t reste = 0;
+
+    // Ici on fait la division binaire pour vérifier qu'il ne reste rien suite à la division
+    for (int i = 0; i < data.size(); i++)
+    {
+        reste ^= data[i];
+
+        for (int j = 0; j < 8; j++)
+        {
+            if (reste & 0x80)
+                reste = (reste << 1) ^ generator;
+            else
+                reste <<= 1;
+        }
+    }
+
+    // On recré la trame en retirant le padding
+    DynamicDataBuffer* decoded_data = new DynamicDataBuffer(data.size() - 1);
+
+    // On recopie le contenu de la trame dans les donnée décodé
+    for (int i = 0; i < decoded_data->size(); i++)
+    {
+        decoded_data->operator[](i) = data[i];
+    }
+
+    return std::pair<bool, DynamicDataBuffer>(reste == 0, *decoded_data);
 }
 
 

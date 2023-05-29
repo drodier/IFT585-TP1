@@ -45,6 +45,8 @@ public:
 
 class CRCDataEncoderDecoder : public DataEncoderDecoder
 {
+private:
+    int generator;
 public:
     CRCDataEncoderDecoder();
     ~CRCDataEncoderDecoder();
