@@ -8,6 +8,8 @@
 #include <atomic>
 #include <thread>
 
+using namespace std;
+
 class Configuration;
 class NetworkDriver;
 
@@ -52,6 +54,8 @@ public:
     ~CRCDataEncoderDecoder();
     DynamicDataBuffer encode(const DynamicDataBuffer& data) const override;
     std::pair<bool, DynamicDataBuffer> decode(const DynamicDataBuffer& data) const override;
+    void affichageEncoding(const DynamicDataBuffer& data, uint8_t reste, DynamicDataBuffer& encoded_data) const;
+    void affichageDecoding(const DynamicDataBuffer& data, uint8_t reste, DynamicDataBuffer& decoded_date) const;
 };
 
 
