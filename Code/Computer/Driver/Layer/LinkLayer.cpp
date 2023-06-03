@@ -292,6 +292,7 @@ MACAddress LinkLayer::arp(const Packet& packet) const
 }
 
 // Fonction qui fait l'envoi des trames et qui gere la fenetre d'envoi
+// la partie en haut, envoi la donne et recoit l'aquitement
 void LinkLayer::senderCallback()
 {
     // À faire TP2
@@ -314,6 +315,7 @@ void LinkLayer::senderCallback()
             frame.Size = (uint16_t)frame.Data.size();
 
             // On envoit la trame. Si la trame n'est pas envoye, c'est qu'on veut arreter le simulateur
+            // not this method?
             if (!sendFrame(frame))
             {
                 return;
@@ -323,6 +325,7 @@ void LinkLayer::senderCallback()
 }
 
 // Fonction qui s'occupe de la reception des trames
+// la partie en bas, recoit la donne et envoi l'aquitement
 void LinkLayer::receiverCallback()
 {
     // À faire TP2
@@ -335,6 +338,7 @@ void LinkLayer::receiverCallback()
         if (m_receivingQueue.canRead<Frame>())
         {
             Frame frame = m_receivingQueue.pop<Frame>();
+            //check if valid here?
             m_driver->getNetworkLayer().receiveData(Buffering::unpack<Packet>(frame.Data));
         }
     }
