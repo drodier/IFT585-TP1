@@ -100,6 +100,8 @@ private:
     MACAddress arp(const Packet& p) const; // Retourne la MACAddress de destination du packet
     bool canReceiveDataFromPhysicalLayer(const Frame& data) const;
 
+    Frame sendData(NumberSequence &nextID);
+
 public:
     LinkLayer(NetworkDriver* driver, const Configuration& config);
     ~LinkLayer();
