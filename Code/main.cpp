@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
     Config config = parse_arguments(argc, argv);
     if (config.CodeCorrecteur > 0) {
         execute_correction_erreur_test(config.CodeCorrecteur);
-        return 0;
+        //return 0;
     }
     
     Configuration globalConfig(config.GlobalConfigName);
