@@ -328,6 +328,7 @@ void LinkLayer::senderCallback()
 // la partie en bas, recoit la donne et envoi l'aquitement
 void LinkLayer::receiverCallback()
 {
+    Event currentEvent = Event::Invalid();
     // À faire TP2
     // Remplacer le code suivant qui ne fait que recevoir les trames dans l'ordre reçu sans validation
     // afin d'exécuter le protocole à fenêtre demandé dans l'énoncé.
@@ -335,9 +336,65 @@ void LinkLayer::receiverCallback()
     // Passtrough à remplacer (TP2)
     while (m_executeReceiving)
     {        
+        currentEvent = getNextReceivingEvent();
+
+        //option 1 recieve trame
+        //if good : sendACK
+        //if bad : sendNACK, start buffer
+        //option 2 recieve ack/Nack
+        //if ack : notifyACK
+        //if nack : notifyNACK
+
         if (m_receivingQueue.canRead<Frame>())
         {
+            //event ackitement
+            //option 1
             Frame frame = m_receivingQueue.pop<Frame>();
+            Frame lastFrameSent; //for ack
+            Frame lastFrameRecieved; //for buffer
+            bool buufferFilling = false;
+
+            //when recieving previously Nack frame, buufering.first, send ack with buffering
+            // if frame from buffer good, send ack for last recieved
+            // if (...){
+            //      buufferFilling = false;
+            //      notifyACK(lastFrameRecieved, lastFrameRecieved.NumberSeq+1);
+            // }
+            //if good
+            if (frame.Ack && buufferFilling) {
+                lastFrameRecieved = frame;
+                notifyACK(lastFrameSent, lastFrameSent.NumberSeq + 1);
+            }
+            if (frame.Ack && !buufferFilling) {
+                lastFrameSent = frame;
+                notifyACK(lastFrameSent, lastFrameSent.NumberSeq+1);
+            }
+            //if bad
+            else {
+                notifyNAK(frame);
+                //start buffer
+                buufferFilling = true;
+                Buffering::pack(frame);
+            }
+
+
+
+            //option 2, recieve ack or nack
+            //if (ack){
+            // notifyACK(frame)
+            //}
+            //if (Nack)
+            // notifyNACK(frame)
+            //}
+
+            //questions: 
+            // what is frame.ack? (sent to vincent)
+            // how to knoww if we recieve normal stuff or a ACK? 
+            // how does the buffer work?
+            // how to check when we recieve a previously Nack frame?
+            // how to tell if a frame is not good?
+            //
+            
             //check if valid here?
             m_driver->getNetworkLayer().receiveData(Buffering::unpack<Packet>(frame.Data));
         }
