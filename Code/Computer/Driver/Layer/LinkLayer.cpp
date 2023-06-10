@@ -100,19 +100,19 @@ bool LinkLayer::sendFrame(const Frame& frame)
     {
         if (canSendData(frame))
         {
-            //Logger log(std::cout);
-            //if (frame.Size == FrameType::NAK)
-            //{
-            //    log << frame.Source << " : Sending NAK  to " << frame.Destination << " : " << frame.Ack << std::endl;
-            //}
-            //else if (frame.Size == FrameType::ACK)
-            //{
-            //    log << frame.Source << " : Sending ACK  to " << frame.Destination << " : " << frame.Ack << std::endl;
-            //}
-            //else
-            //{
-            //    log << frame.Source << " : Sending DATA to " << frame.Destination << " : " << frame.NumberSeq << std::endl;
-            //}
+            Logger log(std::cout);
+            if (frame.Size == FrameType::NAK)
+            {
+                log << frame.Source << " : Sending NAK  to " << frame.Destination << " : " << frame.Ack << std::endl;
+            }
+            else if (frame.Size == FrameType::ACK)
+            {
+                log << frame.Source << " : Sending ACK  to " << frame.Destination << " : " << frame.Ack << std::endl;
+            }
+            else
+            {
+                log << frame.Source << " : Sending DATA to " << frame.Destination << " : " << frame.NumberSeq << std::endl;
+            }
             m_sendingQueue.push(frame);
             return true;
         }
@@ -294,32 +294,90 @@ MACAddress LinkLayer::arp(const Packet& packet) const
 // Fonction qui fait l'envoi des trames et qui gere la fenetre d'envoi
 void LinkLayer::senderCallback()
 {
-    // À faire TP2
-    // Remplacer le code suivant qui ne fait qu'envoyer les trames dans l'ordre reçu sans validation
-    // afin d'exécuter le protocole à fenêtre demandé dans l'énoncé.
-    
-    // Passtrough à remplacer (TP2)
     NumberSequence nextID = 0;
+    Frame lastSent;
+
     while (m_executeSending)
     {
-        // Est-ce qu'on doit envoyer des donnees
-        if (m_driver->getNetworkLayer().dataReady())
+        switch (getNextSendingEvent().Type)
         {
-            Packet packet = m_driver->getNetworkLayer().getNextData();
-            Frame frame;
-            frame.Destination = arp(packet);
-            frame.Source = m_address;
-            frame.NumberSeq = nextID++;
-            frame.Data = Buffering::pack<Packet>(packet);
-            frame.Size = (uint16_t)frame.Data.size();
+        case LinkLayer::EventType::INVALID:
 
-            // On envoit la trame. Si la trame n'est pas envoye, c'est qu'on veut arreter le simulateur
-            if (!sendFrame(frame))
+            // Est-ce qu'on doit envoyer des donnees
+            if (m_driver->getNetworkLayer().dataReady() && nextID == 0)
             {
-                return;
+                lastSent = sendData(nextID);
             }
+
+            break;
+        case LinkLayer::EventType::ACK_RECEIVED:
+
+            // Est-ce qu'on doit envoyer des donnees
+            if (m_driver->getNetworkLayer().dataReady())
+            {
+                lastSent = sendData(nextID);
+            }
+
+            break;
+
+        case LinkLayer::EventType::ACK_TIMEOUT:
+
+            cout << "ACK_TIMEOUT";
+
+            break;
+        case LinkLayer::EventType::NAK_RECEIVED:
+
+            sendFrame(lastSent);
+
+            break;
+        case LinkLayer::EventType::SEND_ACK_REQUEST:
+
+            cout << "SEND_ACK_REQUEST";
+
+            break;
+        case LinkLayer::EventType::SEND_NAK_REQUEST:
+
+            cout << "SEND_NAK_REQUEST";
+
+            break;
+        case LinkLayer::EventType::SEND_TIMEOUT:
+
+            cout << "SEND_TIMEOUT";
+
+            break;
+        case LinkLayer::EventType::STOP_ACK_TIMER_REQUEST:
+
+            cout << "STOP_ACK_TIMER_REQUEST";
+
+            break;
+        }
+
+        if (lastSent.Size == 0)
+        {
+            return;
         }
     }
+}
+
+Frame LinkLayer::sendData(NumberSequence &nextID)
+{
+    Packet packet = m_driver->getNetworkLayer().getNextData();
+    Frame frame;
+    frame.Destination = arp(packet);
+    frame.Source = m_address;
+    frame.NumberSeq = nextID++;
+    frame.Data = Buffering::pack<Packet>(packet);
+    frame.Size = (uint16_t)frame.Data.size();
+
+    // On envoit la trame. Si la trame n'est pas envoye, c'est qu'on veut arreter le simulateur
+    if (!sendFrame(frame))
+    {
+        Frame error;
+        error.Size = 0;
+        return error;
+    }
+
+    return frame;
 }
 
 // Fonction qui s'occupe de la reception des trames
@@ -336,6 +394,7 @@ void LinkLayer::receiverCallback()
         {
             Frame frame = m_receivingQueue.pop<Frame>();
             m_driver->getNetworkLayer().receiveData(Buffering::unpack<Packet>(frame.Data));
+            notifyACK(frame, frame.NumberSeq+1);
         }
     }
 }

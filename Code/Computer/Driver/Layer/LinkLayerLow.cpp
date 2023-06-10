@@ -109,7 +109,7 @@ DynamicDataBuffer CRCDataEncoderDecoder::encode(const DynamicDataBuffer& data) c
     // On ajoute le code CRC dans le padding qui avait été ajouté au début
     encoded_data->operator[](encoded_data->size() - 1) = reste;
 
-    affichageEncoding(data, reste, *encoded_data);
+    //affichageEncoding(data, reste, *encoded_data);
 
     return *encoded_data;
 }
@@ -141,7 +141,7 @@ std::pair<bool, DynamicDataBuffer> CRCDataEncoderDecoder::decode(const DynamicDa
         decoded_data->operator[](i) = data[i];
     }
 
-    affichageDecoding(data, reste, *decoded_data);
+    //affichageDecoding(data, reste, *decoded_data);
 
     return std::pair<bool, DynamicDataBuffer>(reste == 0, *decoded_data);
 }
