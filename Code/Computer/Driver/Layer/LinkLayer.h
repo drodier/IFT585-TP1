@@ -101,6 +101,8 @@ private:
     bool canReceiveDataFromPhysicalLayer(const Frame& data) const;
 
     Frame sendData(NumberSequence &nextID);
+    Frame sendACK(NumberSequence& nextID);
+    Frame sendNAK(NumberSequence& nextID);
 
 public:
     LinkLayer(NetworkDriver* driver, const Configuration& config);

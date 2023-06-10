@@ -332,12 +332,12 @@ void LinkLayer::senderCallback()
             break;
         case LinkLayer::EventType::SEND_ACK_REQUEST:
 
-            cout << "SEND_ACK_REQUEST";
+            sendACK(nextID);
 
             break;
         case LinkLayer::EventType::SEND_NAK_REQUEST:
 
-            cout << "SEND_NAK_REQUEST";
+            sendNAK(nextID);
 
             break;
         case LinkLayer::EventType::SEND_TIMEOUT:
@@ -380,6 +380,46 @@ Frame LinkLayer::sendData(NumberSequence &nextID)
     return frame;
 }
 
+Frame LinkLayer::sendACK(NumberSequence& nextID)
+{
+    Packet packet = m_driver->getNetworkLayer().getNextData();
+    Frame frame;
+    frame.Destination = arp(packet);
+    frame.Source = m_address;
+    frame.NumberSeq = nextID;
+    frame.Size = FrameType::ACK;
+
+    // On envoit la trame. Si la trame n'est pas envoye, c'est qu'on veut arreter le simulateur
+    if (!sendFrame(frame))
+    {
+        Frame error;
+        error.Size = 0;
+        return error;
+    }
+
+    return frame;
+}
+
+Frame LinkLayer::sendNAK(NumberSequence& nextID)
+{
+    Packet packet = m_driver->getNetworkLayer().getNextData();
+    Frame frame;
+    frame.Destination = arp(packet);
+    frame.Source = m_address;
+    frame.NumberSeq = nextID;
+    frame.Size = FrameType::NAK;
+
+    // On envoit la trame. Si la trame n'est pas envoye, c'est qu'on veut arreter le simulateur
+    if (!sendFrame(frame))
+    {
+        Frame error;
+        error.Size = 0;
+        return error;
+    }
+
+    return frame;
+}
+
 // Fonction qui s'occupe de la reception des trames
 void LinkLayer::receiverCallback()
 {
@@ -389,12 +429,55 @@ void LinkLayer::receiverCallback()
     
     // Passtrough à remplacer (TP2)
     while (m_executeReceiving)
-    {        
-        if (m_receivingQueue.canRead<Frame>())
+    {
+        switch (getNextReceivingEvent().Type)
         {
-            Frame frame = m_receivingQueue.pop<Frame>();
-            m_driver->getNetworkLayer().receiveData(Buffering::unpack<Packet>(frame.Data));
-            notifyACK(frame, frame.NumberSeq+1);
+        case LinkLayer::EventType::INVALID:
+
+            if (m_receivingQueue.canRead<Frame>())
+            {
+                Frame frame = m_receivingQueue.pop<Frame>();
+                m_driver->getNetworkLayer().receiveData(Buffering::unpack<Packet>(frame.Data));
+                notifyACK(frame, frame.NumberSeq + 1);
+            }
+
+            break;
+        case LinkLayer::EventType::ACK_RECEIVED:
+
+            cout << "ACK_RECEIVED";
+
+            break;
+
+        case LinkLayer::EventType::ACK_TIMEOUT:
+
+            cout << "ACK_TIMEOUT";
+
+            break;
+        case LinkLayer::EventType::NAK_RECEIVED:
+
+            cout << "NAK_RECEIVED";
+
+            break;
+        case LinkLayer::EventType::SEND_ACK_REQUEST:
+
+            cout << "SEND_ACK_REQUEST";
+
+            break;
+        case LinkLayer::EventType::SEND_NAK_REQUEST:
+
+            cout << "SEND_NAK_REQUEST";
+
+            break;
+        case LinkLayer::EventType::SEND_TIMEOUT:
+
+            cout << "SEND_TIMEOUT";
+
+            break;
+        case LinkLayer::EventType::STOP_ACK_TIMER_REQUEST:
+
+            cout << "STOP_ACK_TIMER_REQUEST";
+
+            break;
         }
     }
 }
