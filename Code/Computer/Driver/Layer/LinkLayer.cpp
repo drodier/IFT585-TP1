@@ -432,78 +432,86 @@ void LinkLayer::receiverCallback()
     Frame lastRecieved;
     Frame awaitedFrame;
     bool waitingForResend = false;
+    CRCDataEncoderDecoder encoder;
 
     while (m_executeReceiving)
     {
+
+        Frame frame = m_receivingQueue.pop<Frame>();
+        m_driver->getNetworkLayer().receiveData(Buffering::unpack<Packet>(frame.Data));
+
         switch (getNextReceivingEvent().Type)
         {
         case LinkLayer::EventType::INVALID:
 
             if (m_receivingQueue.canRead<Frame>()) //si donne valide?
             {
-                Frame frame = m_receivingQueue.pop<Frame>();
-                m_driver->getNetworkLayer().receiveData(Buffering::unpack<Packet>(frame.Data));
-                if (waitingForResend) {
-                    if (frame == awaitedFrame) { // on a recu la tramme qu'on avait NACK
-                        notifyACK(lastRecieved, lastRecieved.NumberSeq + 1);
-                        waitingForResend = false;
+                if (encoder.decode(frame.Data).first) { //data not good
+                    waitingForResend = true;
+                    awaitedFrame = frame;
+                    notifyNAK(frame);
+                }
+                else {
+                    if (waitingForResend) {
+                        if (frame.Data == awaitedFrame.Data) { // on a recu la tramme qu'on avait NACK
+                            notifyACK(lastRecieved, lastRecieved.NumberSeq + 1);
+                            waitingForResend = false;
+                        }
+                        else {
+                            notifyACK(lastACK, frame.NumberSeq + 1); //on ACK la dernier valide
+                            lastRecieved = frame; //on update la derniere recu
+                        }
                     }
-                    else {
-                        notifyACK(lastACK, frame.NumberSeq + 1); //on ACK la dernier valide
-                        lastRecieved = frame; //on update la derniere recu
+                    else {//tout est normal
+                        notifyACK(frame, frame.NumberSeq + 1);
+                        lastACK = frame; //on update la derniere ACK
                     }
                 }
-                else {//tout est normal
-                    notifyACK(frame, frame.NumberSeq + 1); 
-                    lastACK = frame; //on update la derniere ACK
-                }
-            }
-            else { //la donne est pas valide?
-                waitingForResend = true;
-                notifyNAK(frame);
+                
             }
 
             break;
         case LinkLayer::EventType::ACK_RECEIVED:
 
             cout << "ACK_RECEIVED";
+            notifyACK(frame, frame.NumberSeq + 1);
 
             break;
 
         case LinkLayer::EventType::ACK_TIMEOUT:
 
             cout << "ACK_TIMEOUT";
-            //notifyNAK(lastRecieved);
+            notifyNAK(frame);
 
             break;
         case LinkLayer::EventType::NAK_RECEIVED:
 
             cout << "NAK_RECEIVED";
-            //notify to send the frame back
-            notifyNAK(lastACK);            
+            //notify to send the frame again
+            notifyNAK(frame);            
 
             break;
         case LinkLayer::EventType::SEND_ACK_REQUEST:
 
             cout << "SEND_ACK_REQUEST";
-            notifyACK(lastRecieved, lastRecieved.NumberSeq+1);
+            notifyACK(frame, frame.NumberSeq+1);
 
             break;
         case LinkLayer::EventType::SEND_NAK_REQUEST:
 
             cout << "SEND_NAK_REQUEST";
-            notifyNAK(lastRecieved);
+            notifyNAK(frame);
 
             break;
         case LinkLayer::EventType::SEND_TIMEOUT:
 
             cout << "SEND_TIMEOUT";
-            notifyNAK(lastRecieved);
+            notifyNAK(frame);
             break;
         case LinkLayer::EventType::STOP_ACK_TIMER_REQUEST:
 
             cout << "STOP_ACK_TIMER_REQUEST";
-            //stopAckTimer();
+            //stopAckTimer(frame); // time ID?
             break;
         }
     }
