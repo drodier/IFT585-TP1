@@ -428,17 +428,39 @@ void LinkLayer::receiverCallback()
     // afin d'exécuter le protocole à fenêtre demandé dans l'énoncé.
     
     // Passtrough à remplacer (TP2)
+    Frame lastACK;
+    Frame lastRecieved;
+    Frame awaitedFrame;
+    bool waitingForResend = false;
+
     while (m_executeReceiving)
     {
         switch (getNextReceivingEvent().Type)
         {
         case LinkLayer::EventType::INVALID:
 
-            if (m_receivingQueue.canRead<Frame>())
+            if (m_receivingQueue.canRead<Frame>()) //si donne valide?
             {
                 Frame frame = m_receivingQueue.pop<Frame>();
                 m_driver->getNetworkLayer().receiveData(Buffering::unpack<Packet>(frame.Data));
-                notifyACK(frame, frame.NumberSeq + 1);
+                if (waitingForResend) {
+                    if (frame == awaitedFrame) { // on a recu la tramme qu'on avait NACK
+                        notifyACK(lastRecieved, lastRecieved.NumberSeq + 1);
+                        waitingForResend = false;
+                    }
+                    else {
+                        notifyACK(lastACK, frame.NumberSeq + 1); //on ACK la dernier valide
+                        lastRecieved = frame; //on update la derniere recu
+                    }
+                }
+                else {//tout est normal
+                    notifyACK(frame, frame.NumberSeq + 1); 
+                    lastACK = frame; //on update la derniere ACK
+                }
+            }
+            else { //la donne est pas valide?
+                waitingForResend = true;
+                notifyNAK(frame);
             }
 
             break;
@@ -451,32 +473,37 @@ void LinkLayer::receiverCallback()
         case LinkLayer::EventType::ACK_TIMEOUT:
 
             cout << "ACK_TIMEOUT";
+            //notifyNAK(lastRecieved);
 
             break;
         case LinkLayer::EventType::NAK_RECEIVED:
 
             cout << "NAK_RECEIVED";
+            //notify to send the frame back
+            notifyNAK(lastACK);            
 
             break;
         case LinkLayer::EventType::SEND_ACK_REQUEST:
 
             cout << "SEND_ACK_REQUEST";
+            notifyACK(lastRecieved, lastRecieved.NumberSeq+1);
 
             break;
         case LinkLayer::EventType::SEND_NAK_REQUEST:
 
             cout << "SEND_NAK_REQUEST";
+            notifyNAK(lastRecieved);
 
             break;
         case LinkLayer::EventType::SEND_TIMEOUT:
 
             cout << "SEND_TIMEOUT";
-
+            notifyNAK(lastRecieved);
             break;
         case LinkLayer::EventType::STOP_ACK_TIMER_REQUEST:
 
             cout << "STOP_ACK_TIMER_REQUEST";
-
+            //stopAckTimer();
             break;
         }
     }
